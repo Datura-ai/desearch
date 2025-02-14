@@ -29,12 +29,13 @@ from neurons.validators.organic_history_mixin import OrganicHistoryMixin
 
 class BasicScraperValidator(OrganicHistoryMixin):
     def __init__(self, neuron: AbstractNeuron):
+        super().__init__()
         self.neuron = neuron
         self.timeout = 180
         self.max_execution_time = 10
 
-        self.synthetic_history = []
         self.basic_organic_query_state = BasicOrganicQueryState()
+
         # Init device.
         bt.logging.debug("loading", "device")
         bt.logging.debug(
@@ -391,7 +392,7 @@ class BasicScraperValidator(OrganicHistoryMixin):
 
         return params
 
-    async def query_and_score_twitter_basic(self, strategy=QUERY_MINERS.RANDOM):
+    async def query_and_score_twitter_basic(self, strategy):
         try:
             if not len(self.neuron.available_uids):
                 bt.logging.info(
@@ -447,43 +448,23 @@ class BasicScraperValidator(OrganicHistoryMixin):
                 )
             )
 
-            merged_result = self._merge_synthetic_organic_responses(
-                responses, uids, tasks, event, start_time, available_uids
+            merged_event, merged_tasks, merged_responses, merged_uids, start_time = (
+                self._merge_synthetic_organic_responses(
+                    responses, uids, tasks, event, start_time, available_uids
+                )
             )
-            self.synthetic_history.append(merged_result)
 
-            await self.score_random_synthetic_query()
+            await self.compute_rewards_and_penalties(
+                event=merged_event,
+                tasks=merged_tasks,
+                responses=merged_responses,
+                uids=merged_uids,
+                start_time=start_time,
+                is_synthetic=True,
+            )
         except Exception as e:
             bt.logging.error(f"Error in query_and_score_twitter_basic: {e}")
             raise
-
-    async def score_random_synthetic_query(self):
-        # Collect synthetic queries and score randomly
-        synthetic_queries_collection_size = 2
-
-        if len(self.synthetic_history) < synthetic_queries_collection_size:
-            bt.logging.info(
-                f"Skipping scoring random synthetic query as history length is {len(self.synthetic_history)}"
-            )
-
-            return
-
-        event, tasks, final_synapses, uids, start_time = random.choice(
-            self.synthetic_history
-        )
-
-        bt.logging.info(f"Scoring random synthetic query: {event}")
-
-        await self.compute_rewards_and_penalties(
-            event=event,
-            tasks=tasks,
-            responses=final_synapses,
-            uids=uids,
-            start_time=start_time,
-            is_synthetic=True,
-        )
-
-        self.synthetic_history = []
 
     async def organic(
         self,

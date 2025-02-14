@@ -349,12 +349,22 @@ class StreamMiner(ABC):
                     bt.logging.debug("Skipping first metagraph sync")
                     first_run = False
                 else:
-                    bt.logging.info("Resyncing metagraph in background")
                     self.metagraph.sync(subtensor=self.subtensor)
+                    bt.logging.info("Resynced metagraph in background")
                 time.sleep(900)
             except Exception as e:
                 bt.logging.error(f"Error during metagraph sync: {e}")
-                time.sleep(30)
+
+                try:
+                    self.subtensor = bt.subtensor(config=self.config)
+                    self.metagraph = self.subtensor.metagraph(self.config.netuid)
+                except Exception as e:
+                    bt.logging.error(
+                        f"Error during metagraph sync - reconnection to subtensor also failed: {e}"
+                    )
+
+                bt.logging.info("Retrying in 2 minutes")
+                time.sleep(120)
 
     def start_background_sync(self):
         self.sync_thread = threading.Thread(

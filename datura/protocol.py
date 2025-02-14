@@ -250,6 +250,12 @@ class ScraperStreamingSynapse(StreamingSynapse):
         title="Text Chunks",
     )
 
+    is_synthetic: Optional[bool] = pydantic.Field(
+        False,
+        title="Is Synthetic",
+        description="A boolean flag to indicate if the prompt is synthetic.",
+    )
+
     @property
     def texts(self) -> Dict[str, str]:
         """Returns a dictionary of texts, containing a role (twitter summary, search summary, reddit summary, hacker news summary, final summary) and content."""

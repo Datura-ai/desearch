@@ -37,6 +37,7 @@ from neurons.validators.organic_history_mixin import OrganicHistoryMixin
 
 class AdvancedScraperValidator(OrganicHistoryMixin):
     def __init__(self, neuron: AbstractNeuron):
+        super().__init__()
         self.neuron = neuron
         self.timeout = 180
         self.execution_time_options = [Model.NOVA, Model.ORBIT, Model.HORIZON]
@@ -86,8 +87,8 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
         self.region = "us"
         self.date_filter = "qdr:w"  # Past week
 
-        self.synthetic_history = []
         self.organic_query_state = OrganicQueryState()
+
         # Init device.
         bt.logging.debug("loading", "device")
         bt.logging.debug(
@@ -175,6 +176,7 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
         response_order=ResponseOrder.SUMMARY_FIRST,
         model: Optional[Model] = Model.NOVA,
         result_type: Optional[ResultType] = ResultType.LINKS_WITH_SUMMARIES,
+        is_synthetic=False,
     ):
         max_execution_time = get_max_execution_time(model)
 
@@ -210,6 +212,7 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
                 response_order=response_order.value,
                 max_execution_time=max_execution_time,
                 result_type=result_type,
+                is_synthetic=is_synthetic,
             )
             for task in tasks
         ]
@@ -447,7 +450,7 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
 
         bt.logging.debug("Run Task event:", event)
 
-    async def query_and_score(self, strategy=QUERY_MINERS.RANDOM):
+    async def query_and_score(self, strategy):
         try:
 
             if not len(self.neuron.available_uids):
@@ -509,6 +512,7 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
                 google_date_filter=self.date_filter,
                 model=random_model,
                 specified_uids=uids_to_call,
+                is_synthetic=True,
             )
 
             final_synapses = await collect_final_synapses(
@@ -519,41 +523,18 @@ class AdvancedScraperValidator(OrganicHistoryMixin):
             merged_result = self._merge_synthetic_organic_responses(
                 final_synapses, uids, tasks, event, start_time, available_uids
             )
-            self.synthetic_history.append(merged_result)
 
-            await self.score_random_synthetic_query()
-
+            await self.compute_rewards_and_penalties(
+                event=event,
+                tasks=tasks,
+                responses=final_synapses,
+                uids=uids,
+                start_time=start_time,
+                is_synthetic=True,
+            )
         except Exception as e:
             bt.logging.error(f"Error in query_and_score: {e}")
             raise e
-
-    async def score_random_synthetic_query(self):
-        # Collect synthetic queries and score randomly
-        synthetic_queries_collection_size = 2
-
-        if len(self.synthetic_history) < synthetic_queries_collection_size:
-            bt.logging.info(
-                f"Skipping scoring random synthetic query as history length is {len(self.synthetic_history)}"
-            )
-
-            return
-
-        event, tasks, final_synapses, uids, start_time = random.choice(
-            self.synthetic_history
-        )
-
-        bt.logging.info(f"Scoring random synthetic query: {event}")
-
-        await self.compute_rewards_and_penalties(
-            event=event,
-            tasks=tasks,
-            responses=final_synapses,
-            uids=uids,
-            start_time=start_time,
-            is_synthetic=True,
-        )
-
-        self.synthetic_history = []
 
     async def organic(
         self,

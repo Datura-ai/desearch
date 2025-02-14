@@ -74,7 +74,6 @@ pm2 start neurons/validators/api.py --interpreter /usr/bin/python3  --name valid
 - `--reward.twitter_content_weight`: Specifies the weight for the reward model that evaluates the relevance and quality of summary text in conjunction with linked content data.
 - `--neuron.only_allowed_miners`: A list of miner identifiers, hotkey
 - `--neuron.disable_twitter_completion_links_fetch`: Enables the option to skip fetching content data for Twitter links, relying solely on the data provided by miners
-- `--neuron.update_weight_interval`:Defines the frequency (in seconds) at which the network's weight parameters are updated. The default interval is 2700 seconds (45 minutes).
 - `--neuron.update_available_uids_interval`: Specifies the interval, in seconds, for updating the list of available UIDs. The default interval is 600 seconds (10 minutes).
 
 ## 7. Monitor Your Process

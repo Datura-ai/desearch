@@ -146,15 +146,8 @@ def add_args(cls, parser):
     parser.add_argument(
         "--neuron.run_all_miner_syn_qs_interval",
         type=int,
-        help="Sets the interval, in seconds, for querying all miners with synthetic questions. Set to a positive value to enable. default is 45 minutes.",
-        default=2700,
-    )
-
-    parser.add_argument(
-        "--neuron.update_weight_interval",
-        type=int,
-        help="Defines the frequency (in seconds) at which the network's weight parameters are updated. The default interval is 2700 seconds (45 minutes).",
-        default=2700,
+        help="Sets the interval, in seconds, for querying all miners with synthetic questions. Set to a positive value to enable. The default interval is 72 minutes.",
+        default=4320,
     )
 
     parser.add_argument(
