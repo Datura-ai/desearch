@@ -124,10 +124,52 @@ def add_args(cls, parser):
     )
 
     parser.add_argument(
+        "--reward.deep_research_content_relevance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates content relevance of deep research result.",
+        default=DefaultRewardFrameworkConfig.deep_research_content_relevance_weight,
+    )
+
+    parser.add_argument(
+        "--reward.deep_research_data_relevance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates the data relevance of deep research result.",
+        default=DefaultRewardFrameworkConfig.deep_research_data_relevance_weight,
+    )
+
+    parser.add_argument(
+        "--reward.deep_research_source_links_relevance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates the source links relevance of deep research result.",
+        default=DefaultRewardFrameworkConfig.deep_research_source_links_relevance_weight,
+    )
+
+    parser.add_argument(
+        "--reward.deep_research_system_message_relevance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates the system message relevance of deep research result.",
+        default=DefaultRewardFrameworkConfig.deep_research_system_message_relevance_weight,
+    )
+
+    parser.add_argument(
+        "--reward.deep_research_logical_coherence_relevance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates logical coherence of deep research result.",
+        default=DefaultRewardFrameworkConfig.deep_research_logical_coherence_relevance_weight,
+    )
+
+    parser.add_argument(
         "--reward.web_search_relavance_weight",
         type=float,
         help="Specifies the weight for the reward model that evaluates the relevance and quality of search summary text in conjunction with linked content data.",
         default=DefaultRewardFrameworkConfig.web_search_relavance_weight,
+    )
+
+    parser.add_argument(
+        "--reward.people_search_relavance_weight",
+        type=float,
+        help="Specifies the weight for the reward model that evaluates the relevance and quality of people searech result",
+        default=DefaultRewardFrameworkConfig.people_search_relavance_weight,
     )
 
     parser.add_argument(

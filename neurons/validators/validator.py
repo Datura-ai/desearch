@@ -15,6 +15,8 @@ from datura.bittensor.wallet import Wallet
 from neurons.validators.advanced_scraper_validator import AdvancedScraperValidator
 from neurons.validators.basic_scraper_validator import BasicScraperValidator
 from neurons.validators.basic_web_scraper_validator import BasicWebScraperValidator
+from neurons.validators.people_search_validator import PeopleSearchValidator
+from neurons.validators.deep_research_validator import DeepResearchValidator
 from neurons.validators.config import add_args, check_config, config
 from neurons.validators.weights import init_wandb, set_weights, get_weights
 from traceback import print_exception
@@ -24,6 +26,7 @@ from datura.misc import ttl_get_block
 from datura.utils import (
     resync_metagraph,
     save_logs_in_chunks,
+    save_logs_in_chunks_for_deep_research,
 )
 from datura.redis.utils import load_moving_averaged_scores, save_moving_averaged_scores
 from neurons.validators.proxy.uid_manager import UIDManager
@@ -52,6 +55,8 @@ class Neuron(AbstractNeuron):
     advanced_scraper_validator: "AdvancedScraperValidator"
     basic_scraper_validator: "BasicScraperValidator"
     basic_web_scraper_validator: "BasicWebScraperValidator"
+    people_search_validator: "PeopleSearchValidator"
+    deep_research_validator: "DeepResearchValidator"
     moving_average_scores: torch.Tensor = None
     uid: int = None
     shutdown_event: asyncio.Event()
@@ -76,6 +81,8 @@ class Neuron(AbstractNeuron):
         self.advanced_scraper_validator = AdvancedScraperValidator(neuron=self)
         self.basic_scraper_validator = BasicScraperValidator(neuron=self)
         self.basic_web_scraper_validator = BasicWebScraperValidator(neuron=self)
+        self.people_search_validator = PeopleSearchValidator(neuron=self)
+        self.deep_research_validator = DeepResearchValidator(neuron=self)
         bt.logging.info("initialized_validators")
 
         self.step = 0
@@ -268,6 +275,59 @@ class Neuron(AbstractNeuron):
                     tweet_scores=val_score_responses_list[0],
                     search_scores=val_score_responses_list[1],
                     summary_link_scores=val_score_responses_list[2],
+                    weights=weights,
+                    neuron=neuron,
+                    netuid=self.config.netuid,
+                    organic_penalties=organic_penalties,
+                    query_type=query_type,
+                )
+            )
+        except Exception as e:
+            bt.logging.error(f"Error in update_scores: {e}")
+            raise e
+
+    async def update_scores_for_deep_research(
+        self,
+        wandb_data,
+        responses,
+        uids,
+        rewards,
+        all_rewards,
+        all_original_rewards,
+        val_score_responses_list,
+        organic_penalties,
+        neuron,
+        query_type,
+    ):
+        try:
+            if self.config.wandb_on:
+                wandb.log(wandb_data)
+
+            weights = await self.run_sync_in_async(lambda: get_weights(self))
+
+            asyncio.create_task(
+                save_logs_in_chunks_for_deep_research(
+                    self,
+                    responses=responses,
+                    uids=uids,
+                    rewards=rewards,
+                    content_rewards=all_rewards[0],
+                    data_rewards=all_rewards[1],
+                    logical_coherence_rewards=all_rewards[2],
+                    source_links_rewards=all_rewards[3],
+                    system_message_rewards=all_rewards[4],
+                    performance_rewards=all_rewards[5],
+                    original_content_rewards=all_original_rewards[0],
+                    original_data_rewards=all_original_rewards[1],
+                    original_logical_coherence_rewards=all_original_rewards[2],
+                    original_source_links_rewards=all_original_rewards[3],
+                    original_system_message_rewards=all_original_rewards[4],
+                    original_performance_rewards=all_original_rewards[5],
+                    content_scores=val_score_responses_list[0],
+                    data_scores=val_score_responses_list[1],
+                    logical_coherence_scores=val_score_responses_list[2],
+                    source_links_scores=val_score_responses_list[3],
+                    system_message_scores=val_score_responses_list[4],
                     weights=weights,
                     neuron=neuron,
                     netuid=self.config.netuid,
@@ -529,6 +589,40 @@ class Neuron(AbstractNeuron):
             start_time=time.time(),
         )
 
+    async def compute_people_search_organic_responses(self):
+        specified_uids = self.people_search_validator.get_uids_with_no_history(
+            self.available_uids
+        )
+        if specified_uids:
+            bt.logging.info(
+                f"Running people search synthetic queries with specified uids: {specified_uids}"
+            )
+            await self.people_search_validator.query_and_score_people_search(
+                strategy=QUERY_MINERS.ALL, specified_uids=specified_uids
+            )
+
+        await self.people_search_validator.compute_rewards_and_penalties(
+            **self.people_search_validator.get_random_organic_responses(),
+            start_time=time.time(),
+        )
+
+    async def compute_deep_research_organic_responses(self):
+        specified_uids = self.deep_research_validator.get_uids_with_no_history(
+            self.available_uids
+        )
+        if specified_uids:
+            bt.logging.info(
+                f"Running deep research synthetic queries with specified uids: {specified_uids}"
+            )
+            await self.deep_research_validator.query_and_score(
+                strategy=QUERY_MINERS.ALL, specified_uids=specified_uids
+            )
+
+        await self.deep_research_validator.compute_rewards_and_penalties(
+            **self.deep_research_validator.get_random_organic_responses(),
+            start_time=time.time(),
+        )
+
     async def compute_web_basic_organic_responses(self):
         specified_uids = self.basic_web_scraper_validator.get_uids_with_no_history(
             self.available_uids
@@ -585,9 +679,11 @@ class Neuron(AbstractNeuron):
                         if not self.organic_responses_computed:
                             bt.logging.info("Computing organic responses")
                             tasks = [
-                                self.compute_basic_organic_responses,
-                                self.compute_organic_responses,
-                                self.compute_web_basic_organic_responses,
+                                # self.compute_basic_organic_responses,
+                                # self.compute_organic_responses,
+                                # self.compute_web_basic_organic_responses,
+                                # self.compute_people_search_organic_responses,
+                                self.compute_deep_research_organic_responses
                             ]
                             self.loop.create_task(random.choice(tasks)())
 
