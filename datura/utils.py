@@ -24,7 +24,12 @@ from datura.misc import ttl_get_block
 import re
 import html
 import unicodedata
-from datura.protocol import Model, TwitterScraperTweet, WebSearchResult
+from datura.protocol import (
+    Model,
+    TwitterScraperTweet,
+    WebSearchResult,
+    PeopleSearchResult,
+)
 from neurons.validators.apify.twitter_scraper_actor import TwitterScraperActor
 from typing import List
 from datura.services.twitter_utils import TwitterUtils
@@ -758,6 +763,15 @@ def is_valid_tweet(tweet):
     return True
 
 
+def is_valid_linkedin_profile(profile):
+    try:
+        PeopleSearchResult(**profile)
+    except ValidationError as e:
+        bt.logging.error(f"Invalid miner linkedin profile data: {e}")
+        return False
+    return True
+
+
 def is_valid_web_search_result(result):
     try:
         WebSearchResult(**result)
@@ -765,3 +779,16 @@ def is_valid_web_search_result(result):
         bt.logging.error(f"Invalid miner web search result: {e}")
         return False
     return True
+
+
+def str_linkedin_profile(profile):
+    if isinstance(profile, PeopleSearchResult):
+        profile = profile.model_dump()
+
+    filtered_profile = {
+        key: value
+        for key, value in profile.items()
+        if key not in ["relevance_summary", "criteria_summary"]
+    }
+
+    return filtered_profile.__str__()

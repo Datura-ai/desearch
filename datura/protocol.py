@@ -820,6 +820,107 @@ class WebSearchSynapse(Synapse):
         return self
 
 
+class LinkedinExperienceItem(BaseModel):
+    company_id: Optional[str] = None
+    company_link: Optional[str] = None
+    title: str
+    subtitle: Optional[str] = None
+    caption: Optional[str] = None
+    metadata: Optional[str] = None
+
+
+class LinkedinEducationItem(BaseModel):
+    company_id: Optional[str] = None
+    company_link: Optional[str] = None
+    title: str
+    subtitle: Optional[str] = None
+    caption: Optional[str] = None
+
+
+class LinkedinLanguageItem(BaseModel):
+    title: str
+    caption: Optional[str] = None
+
+
+class PeopleSearchResult(BaseModel):
+    link: str
+    first_name: str
+    last_name: str
+    full_name: str
+    title: str
+    summary: str
+    avatar: str
+    experiences: Optional[List[LinkedinExperienceItem]] = []
+    educations: Optional[List[LinkedinEducationItem]] = []
+    languages: Optional[List[LinkedinLanguageItem]] = []
+    license_and_certificates: Optional[List[Dict[str, Any]]] = []
+    honors_and_awards: Optional[List[Dict[str, Any]]] = []
+    volunteer_and_awards: Optional[List[Dict[str, Any]]] = []
+    verifications: Optional[List[Dict[str, Any]]] = []
+    promos: Optional[List[Dict[str, Any]]] = []
+    highlights: Optional[List[Dict[str, Any]]] = []
+    projects: Optional[List[Dict[str, Any]]] = []
+    publications: Optional[List[Dict[str, Any]]] = []
+    patents: Optional[List[Dict[str, Any]]] = []
+    courses: Optional[List[Dict[str, Any]]] = []
+    organizations: Optional[List[Dict[str, Any]]] = []
+    volunteer_causes: Optional[List[Dict[str, Any]]] = []
+    interests: Optional[List[Dict[str, Any]]] = []
+    recommendations: Optional[List[Dict[str, Any]]] = []
+    skills: Optional[List[Dict[str, Any]]] = []
+
+    relevance_summary: Optional[str] = None
+    criteria_summary: Optional[List[str]] = []
+
+
+class PeopleSearchResultList(BaseModel):
+    data: List[PeopleSearchResult]
+
+
+class PeopleSearchSynapse(Synapse):
+    """A class to represent web search synapse"""
+
+    query: str = pydantic.Field(
+        "",
+        title="Query",
+        description="The query string to fetch results for. Example: 'Former investment bankers who transitioned into startup CFO roles'. Immutable.",
+        allow_mutation=False,
+    )
+
+    is_synthetic: Optional[bool] = pydantic.Field(
+        False,
+        title="Is Synthetic",
+        description="A boolean flag to indicate if the prompt is synthetic.",
+    )
+
+    max_execution_time: Optional[int] = pydantic.Field(
+        None,
+        title="Max Execution Time (timeout)",
+        description="Maximum time to execute concrete request",
+    )
+
+    criteria: Optional[List[str]] = pydantic.Field(
+        default_factory=list,
+        title="Search criteria",
+        description="Search criteria based on query.",
+    )
+
+    results: Optional[List[Dict[str, Any]]] = pydantic.Field(
+        default_factory=list,
+        title="Web",
+        description="Fetched Web Data.",
+    )
+
+    validator_results: Optional[List[PeopleSearchResult]] = pydantic.Field(
+        default_factory=list,
+        title="Validator Web",
+        description="Fetched validator Web Data.",
+    )
+
+    def deserialize(self) -> str:
+        return self
+
+
 class TwitterSearchSynapse(Synapse):
     """A class to represent Twitter Advanced Search Synapse"""
 
